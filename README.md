@@ -1,5 +1,7 @@
 # Occasion — wedding, toast & eulogy speech writer
 
+[![CI](https://github.com/alok024/occasion/actions/workflows/ci.yml/badge.svg)](https://github.com/alok024/occasion/actions/workflows/ci.yml) [![Deploy](https://github.com/alok024/occasion/actions/workflows/deploy.yml/badge.svg)](https://github.com/alok024/occasion/actions/workflows/deploy.yml)
+
 The perfect speech, when it matters most. Answer a short questionnaire about the person
 and the moment, and Occasion writes four polished, ready-to-read speeches — heartfelt,
 story-driven, funny, and short-and-sweet — each built from the real names and memories you
