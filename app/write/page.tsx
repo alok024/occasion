@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import DeliveryKit from './DeliveryKit';
 
 interface Draft {
   style: string;
@@ -10,12 +11,12 @@ interface Draft {
 }
 
 const OCCASIONS = [
+  { value: 'eulogy', label: 'Eulogy / memorial' },
   { value: 'wedding-best-man', label: 'Wedding — best man' },
   { value: 'wedding-maid-of-honor', label: 'Wedding — maid of honor' },
   { value: 'wedding-parent', label: 'Wedding — parent of the bride/groom' },
   { value: 'vows', label: 'Wedding vows' },
   { value: 'toast', label: 'Toast (any celebration)' },
-  { value: 'eulogy', label: 'Eulogy / memorial' },
   { value: 'anniversary', label: 'Anniversary' },
   { value: 'retirement', label: 'Retirement' },
 ];
@@ -27,16 +28,15 @@ const LENGTHS = ['short', 'medium', 'long'];
 // In mock mode (no Razorpay keys) the order route ships a precomputed mock payment,
 // so the browser completes with no modal and no charge. With real keys the second
 // branch loads the Razorpay modal. Both branches stay in the code.
-async function purchase(planId: string): Promise<{
-  order_id: string;
-  payment_id: string;
-  signature: string;
-  testMode: boolean;
-}> {
+async function purchase(
+  planId: string,
+  generationId: string,
+  owner: string
+): Promise<{ order_id: string; payment_id: string; signature: string }> {
   const res = await fetch('/api/checkout/order', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ planId }),
+    body: JSON.stringify({ planId, generationId, owner }),
   });
   const order = await res.json();
 
@@ -45,7 +45,6 @@ async function purchase(planId: string): Promise<{
       order_id: order.order_id,
       payment_id: order.mock_payment.payment_id,
       signature: order.mock_payment.signature,
-      testMode: true,
     };
   }
 
@@ -64,7 +63,6 @@ async function purchase(planId: string): Promise<{
           order_id: order.order_id,
           payment_id: r.razorpay_payment_id,
           signature: r.razorpay_signature,
-          testMode: false,
         });
       },
       modal: { ondismiss: () => reject(new Error('Payment cancelled')) },
@@ -96,12 +94,14 @@ export default function Write() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [generationId, setGenerationId] = useState('');
+  const [owner, setOwner] = useState('');
   const [preview, setPreview] = useState<Draft | null>(null);
+  const [outline, setOutline] = useState<string[]>([]);
   const [lockedCount, setLockedCount] = useState(0);
+  const [paymentMock, setPaymentMock] = useState(false);
 
   const [unlocking, setUnlocking] = useState(false);
   const [drafts, setDrafts] = useState<Draft[] | null>(null);
-  const [testMode, setTestMode] = useState(false);
 
   function setAnecdote(i: number, v: string) {
     setAnecdotes((prev) => prev.map((a, idx) => (idx === i ? v : a)));
@@ -115,6 +115,7 @@ export default function Write() {
     }
     setLoading(true);
     setPreview(null);
+    setOutline([]);
     setDrafts(null);
     try {
       const res = await fetch('/api/generate', {
@@ -130,11 +131,14 @@ export default function Write() {
           anecdotes: anecdotes.map((a) => a.trim()).filter(Boolean),
         }),
       });
-      if (!res.ok) throw new Error('Generation failed');
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Generation failed. Please try again.');
       setGenerationId(data.generationId);
+      setOwner(data.owner);
       setPreview(data.preview);
-      setLockedCount(data.lockedCount);
+      setOutline(Array.isArray(data.outline) ? data.outline : []);
+      setLockedCount(data.lockedCount ?? 0);
+      setPaymentMock(Boolean(data.paymentMock));
     } catch (e: any) {
       setError(e.message || 'Something went wrong.');
     } finally {
@@ -146,20 +150,20 @@ export default function Write() {
     setError('');
     setUnlocking(true);
     try {
-      const pay = await purchase('unlock');
-      setTestMode(pay.testMode);
+      const pay = await purchase('unlock', generationId, owner);
       const res = await fetch('/api/unlock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           generationId,
+          owner,
           order_id: pay.order_id,
           payment_id: pay.payment_id,
           signature: pay.signature,
         }),
       });
-      const data = await res.json();
-      if (!data.ok) throw new Error('Could not verify the purchase. Please try again.');
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!data.ok) throw new Error(data.error || 'Could not verify the purchase. Please try again.');
       setDrafts(data.drafts);
     } catch (e: any) {
       setError(e.message || 'Unlock failed.');
@@ -180,9 +184,13 @@ export default function Write() {
 
       <section className="container" style={{ paddingBottom: 64 }}>
         <div className="hero" style={{ padding: '40px 0 24px' }}>
-          <span className="eyebrow">Write your speech</span>
-          <h1>Tell us about the moment</h1>
-          <p className="lead">The more real detail you give, the better it sounds. Your first draft is free.</p>
+          <span className="eyebrow">Write the eulogy</span>
+          <h1>Say the words they deserve to hear</h1>
+          <p className="lead">
+            Answer a few questions about them and get a strong opening free. Unlocking adds the
+            full eulogy plus a delivery kit built for the day — teleprompter, timed read, and a
+            pronunciation guide.
+          </p>
         </div>
 
         <div className="card">
@@ -220,7 +228,7 @@ export default function Write() {
             </div>
             <div className="field">
               <label htmlFor="honoree">Who it is for</label>
-              <input id="honoree" type="text" value={honoree} onChange={(e) => setHonoree(e.target.value)} placeholder="e.g. Sam, or Sam and Jamie" />
+              <input id="honoree" type="text" value={honoree} onChange={(e) => setHonoree(e.target.value)} placeholder="e.g. Sam" />
             </div>
             <div className="field">
               <label htmlFor="relationship">Your relationship to them</label>
@@ -231,7 +239,8 @@ export default function Write() {
           <div className="field">
             <label>Memories and anecdotes</label>
             <p className="muted" style={{ marginTop: 0, fontSize: '0.9rem' }}>
-              Two to four short, specific memories. A trip, an inside joke, a moment they showed up for you.
+              Two to four short, specific memories — a story only you would know, a habit you will
+              miss, a moment that captures who they were.
             </p>
             {anecdotes.map((a, i) => (
               <textarea
@@ -247,15 +256,15 @@ export default function Write() {
           {error && <p style={{ color: 'var(--err)', fontWeight: 600 }}>{error}</p>}
 
           <button className="btn lg" onClick={generate} disabled={loading} style={{ width: '100%' }}>
-            {loading ? <><span className="spinner" /> Writing your drafts…</> : 'Generate my speech'}
+            {loading ? <><span className="spinner" /> Writing your speech…</> : 'Generate my speech'}
           </button>
         </div>
 
         {preview && (
           <div style={{ marginTop: 40 }}>
             <div className="center" style={{ marginBottom: 24 }}>
-              <span className="eyebrow">Your drafts</span>
-              <h2>{drafts ? 'All four drafts, ready to use' : 'Your free preview'}</h2>
+              <span className="eyebrow">Your speech</span>
+              <h2>{drafts ? 'Ready to deliver' : 'Your free preview'}</h2>
             </div>
 
             {!drafts && (
@@ -263,31 +272,28 @@ export default function Write() {
                 <DraftCard draft={preview} badge="Free preview" />
 
                 <div className="card" style={{ marginTop: 24, textAlign: 'center', borderColor: 'var(--accent)' }}>
-                  <h3 style={{ marginBottom: 6 }}>Unlock the other {lockedCount} drafts</h3>
+                  <h3 style={{ marginBottom: 6 }}>Unlock the full eulogy</h3>
                   <p className="muted" style={{ marginTop: 0 }}>
-                    Story-driven, funny, and short-and-sweet takes — all built from your details.
+                    {lockedCount > 0
+                      ? `${lockedCount} more draft${lockedCount === 1 ? '' : 's'}, plus a delivery kit built for the day.`
+                      : 'A delivery kit built for the day.'}
                   </p>
 
-                  <div className="grid cols-3" style={{ marginTop: 12 }}>
-                    {[0, 1, 2].map((n) => (
-                      <div key={n} className="card" style={{ position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none', opacity: 0.7 }}>
-                          <strong>Draft {n + 2}</strong>
-                          <p className="muted" style={{ fontSize: '0.85rem' }}>
-                            Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor
-                            incididunt ut labore et dolore magna aliqua ut enim ad minim veniam.
-                          </p>
-                        </div>
-                        <span className="badge warn" style={{ position: 'absolute', top: 12, right: 12 }}>Locked</span>
-                      </div>
-                    ))}
-                  </div>
+                  {outline.length > 0 && (
+                    <ul className="pill-list" style={{ textAlign: 'left', maxWidth: 420, margin: '0 auto' }}>
+                      {outline.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
 
                   <button className="btn lg" onClick={unlock} disabled={unlocking} style={{ marginTop: 20, width: '100%', maxWidth: 360 }}>
-                    {unlocking ? <><span className="spinner" /> Unlocking…</> : 'Unlock all 4 drafts — $24'}
+                    {unlocking ? <><span className="spinner" /> Unlocking…</> : 'Unlock the full eulogy + delivery kit'}
                   </button>
                   <p className="muted" style={{ fontSize: '0.82rem', marginBottom: 0 }}>
-                    Test mode — no real charge. One-time payment, yours to keep.
+                    {paymentMock
+                      ? 'Test mode — no real charge. One-time payment, yours to keep.'
+                      : 'One-time payment, yours to keep. Secure checkout via Razorpay.'}
                   </p>
                 </div>
               </>
@@ -295,7 +301,7 @@ export default function Write() {
 
             {drafts && (
               <>
-                {testMode && (
+                {paymentMock && (
                   <p className="center">
                     <span className="badge ok">Test mode — no real charge</span>
                   </p>
@@ -305,6 +311,7 @@ export default function Write() {
                     <DraftCard key={d.style} draft={d} badge={`Draft ${i + 1}`} downloadable honoree={honoree} />
                   ))}
                 </div>
+                <DeliveryKit drafts={drafts} honoree={honoree} />
               </>
             )}
           </div>
@@ -312,7 +319,7 @@ export default function Write() {
       </section>
 
       <footer className="footer">
-        <div className="container">Occasion — the perfect speech, when it matters most.</div>
+        <div className="container">Occasion — the words they deserve, delivered the way they deserve.</div>
       </footer>
     </main>
   );

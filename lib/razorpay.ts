@@ -23,6 +23,14 @@ export interface CreatedOrder {
   mock: boolean;
 }
 
+// Mock mode is fine in dev/test/build, but a production deploy with no keys means payments
+// are silently fake. Gate at call time only (never at import) so build/smoke stay green everywhere else.
+function refuseMockInProduction(): void {
+  if (RAZORPAY_MOCK && process.env.NODE_ENV === 'production') {
+    throw new Error('Razorpay is not configured: refusing mock checkout in production');
+  }
+}
+
 // Create an order. `notes` carry the purchase intent so the webhook/verify can reconstruct
 // what was bought without a DB lookup (Vachix pattern). amount is in the smallest unit.
 export async function createOrder(
@@ -30,6 +38,8 @@ export async function createOrder(
   currency: string,
   notes: Record<string, string>,
 ): Promise<CreatedOrder> {
+  refuseMockInProduction();
+
   if (RAZORPAY_MOCK) {
     // Deterministic-ish mock id; no network. Signature check below understands mock orders.
     const id = 'order_mock_' + crypto.randomBytes(8).toString('hex');
@@ -55,6 +65,8 @@ function hexEqual(a: string, b: string): boolean {
 
 // Verify the client checkout callback: HMAC-SHA256 over `${orderId}|${paymentId}` with the key secret.
 export function verifyPaymentSignature(orderId: string, paymentId: string, signature: string): boolean {
+  refuseMockInProduction();
+
   if (RAZORPAY_MOCK) {
     // In mock mode, accept the mock signature the mock checkout produced (see mockSignature()).
     return signature === mockSignature(orderId, paymentId);
@@ -66,7 +78,8 @@ export function verifyPaymentSignature(orderId: string, paymentId: string, signa
 // Verify a webhook: HMAC-SHA256 over the RAW request body with the webhook secret.
 // Register the webhook route with a raw-body parser BEFORE any JSON body parser.
 export function verifyWebhookSignature(rawBody: Buffer | string, signature: string): boolean {
-  if (RAZORPAY_MOCK || !WEBHOOK_SECRET) return true; // mock: trust local webhook simulator
+  if (RAZORPAY_MOCK) return true; // mock: trust the local webhook simulator
+  if (!WEBHOOK_SECRET) return false; // fail closed: live mode requires the secret to verify anything
   const expected = crypto.createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest('hex');
   return hexEqual(expected, signature);
 }

@@ -1,18 +1,18 @@
 import Link from 'next/link';
 
-const occasions = ['Wedding', 'Toast', 'Vows', 'Eulogy', 'Anniversary'];
+const occasions = ['Eulogy', 'Memorial', 'Wedding', 'Toast', 'Vows', 'Anniversary'];
 
 const testimonials = [
-  {
-    quote: 'I had two days and no idea where to start. Ten minutes here and I had a best-man speech that made the whole room laugh, then go quiet.',
-    who: 'Marcus, best man',
-  },
   {
     quote: 'The eulogy for my father felt impossible to write. This gave me the words I could not find, in my own voice.',
     who: 'Priya, daughter',
   },
   {
-    quote: 'Four different takes meant I could pick the one that actually sounded like me. Worth every cent.',
+    quote: 'I had two days and no idea where to start. Ten minutes here and I had a best-man speech that made the whole room laugh, then go quiet.',
+    who: 'Marcus, best man',
+  },
+  {
+    quote: 'Four different takes meant I could pick the one that actually sounded like me. Worth every rupee.',
     who: 'Dana, maid of honor',
   },
 ];
@@ -30,17 +30,18 @@ export default function Home() {
 
       <section className="container">
         <div className="hero">
-          <span className="eyebrow">Speeches that land</span>
+          <span className="eyebrow">Eulogies, memorials, and toasts</span>
           <h1>
-            The perfect speech, <span className="gradient-text">when it matters most</span>
+            The eulogy you do not know how to start, <span className="gradient-text">finished in minutes</span>
           </h1>
           <p className="lead">
-            Answer a few questions about the person and the moment. Occasion writes you four
-            polished, ready-to-read speeches in seconds — heartfelt, story-driven, funny, and short.
-            Pick the one that sounds like you.
+            Answer a few gentle questions about the person and the moment. Occasion writes you
+            four complete, ready-to-read eulogies — heartfelt, story-driven, light, and brief —
+            then hands you a full delivery kit so you can stand up and say it steady. Works just
+            as well for the wedding toast or vow you have been putting off.
           </p>
           <div className="row" style={{ justifyContent: 'center', maxWidth: 420, margin: '0 auto' }}>
-            <Link href="/write" className="btn lg">Write my speech</Link>
+            <Link href="/write" className="btn lg">Write my eulogy</Link>
           </div>
           <div style={{ marginTop: 18 }}>
             {occasions.map((o) => (
@@ -64,20 +65,45 @@ export default function Home() {
       <section className="container section">
         <div className="center">
           <span className="eyebrow">How it works</span>
-          <h2>From blank page to standing ovation</h2>
+          <h2>From blank page to ready to speak</h2>
         </div>
         <div className="grid cols-3" style={{ marginTop: 28 }}>
           <div className="card">
-            <h3>1. Tell us the moment</h3>
-            <p className="muted">Who is speaking, who it is for, the tone you want, and a few real memories.</p>
+            <h3>1. Tell us about them</h3>
+            <p className="muted">Who they were, who is speaking, the tone you want, and a few real memories.</p>
           </div>
           <div className="card">
             <h3>2. Get four drafts</h3>
             <p className="muted">Four distinct angles built from your details — not templates, not filler.</p>
           </div>
           <div className="card">
-            <h3>3. Make it yours</h3>
-            <p className="muted">Copy, tweak a line or two, and print. You will sound like the best version of you.</p>
+            <h3>3. Make it yours, and practice it</h3>
+            <p className="muted">Copy, tweak a line or two, then rehearse with the delivery kit until you can say it steady.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="container section">
+        <div className="center">
+          <span className="eyebrow">Say it steady</span>
+          <h2>The delivery kit comes with every unlock</h2>
+        </div>
+        <div className="grid cols-2" style={{ marginTop: 28, maxWidth: 760, margin: '28px auto 0' }}>
+          <div className="card">
+            <h3>Teleprompter</h3>
+            <p className="muted">A clean, large-type scroll so you can read hands-free and keep your eyes on the room.</p>
+          </div>
+          <div className="card">
+            <h3>Timed read</h3>
+            <p className="muted">Know exactly how long it runs out loud, so two minutes never turns into ten.</p>
+          </div>
+          <div className="card">
+            <h3>Pronunciation guide</h3>
+            <p className="muted">Names and unfamiliar words spelled out phonetically, so nothing trips you up at the podium.</p>
+          </div>
+          <div className="card">
+            <h3>Voice rehearsal</h3>
+            <p className="muted">Practice it out loud and hear it back before the day, so the first time is not in front of the room.</p>
           </div>
         </div>
       </section>
@@ -91,25 +117,25 @@ export default function Home() {
           <div className="card">
             <span className="badge">Free preview</span>
             <div className="price" style={{ marginTop: 14 }}>
-              <span className="amt">$0</span>
+              <span className="amt">Free</span>
             </div>
             <ul className="pill-list">
               <li>Answer the full questionnaire</li>
-              <li>Read your first complete draft</li>
-              <li>See how good it really is before you pay</li>
+              <li>See the complete structure for all four drafts</li>
+              <li>Read one full, polished opening before you pay</li>
             </ul>
             <Link href="/write" className="btn secondary" style={{ width: '100%' }}>Try it free</Link>
           </div>
           <div className="card" style={{ borderColor: 'var(--accent)' }}>
-            <span className="badge warn">Best value</span>
+            <span className="badge warn">Full speech + delivery kit</span>
             <div className="price" style={{ marginTop: 14 }}>
-              <span className="amt">$24</span>
-              <span className="muted">one-time</span>
+              <span className="amt">One price</span>
+              <span className="muted">one-time, INR</span>
             </div>
             <ul className="pill-list">
               <li>Unlock all four full drafts</li>
-              <li>Heartfelt, story-driven, funny, and short</li>
-              <li>Copy, download, and print — yours to keep</li>
+              <li>Teleprompter, timed read, and pronunciation guide</li>
+              <li>Voice rehearsal, download, and print — yours to keep</li>
             </ul>
             <Link href="/write" className="btn" style={{ width: '100%' }}>Write my speech</Link>
           </div>
@@ -118,8 +144,8 @@ export default function Home() {
 
       <footer className="footer">
         <div className="container">
-          Occasion — the perfect speech, when it matters most. Built for weddings, toasts, vows,
-          eulogies, and every moment in between.
+          Occasion — help finding the words for the eulogy, toast, or vow you have to give, and
+          the delivery kit to help you say them steady.
         </div>
       </footer>
     </main>
