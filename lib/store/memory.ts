@@ -1,18 +1,10 @@
-// Zero-dependency default DraftStore: in-memory Maps with TTL/eviction, plus
-// optional JSON-file persistence so a local `next dev` restart doesn't lose
-// everything. No network calls, no external client -- this is what getStore()
-// returns until a real backend (see supabase-stub.ts) is wired in.
-//
-// Note this still does not survive across separate Vercel lambda instances
-// (each gets its own process); that cross-instance fix is the external backend,
-// not this file. File persistence here is a local-dev convenience only.
 
 import fs from 'fs';
 import path from 'path';
 import type { DraftStore, DraftRecord, OrderRecord, GrantResult } from './index';
 
-const TTL_MS = 24 * 60 * 60 * 1000; // one sitting's worth of generate -> pay -> unlock, and then some
-const MAX_ENTRIES = 5000; // hard cap per map so a traffic burst can't grow memory unbounded before TTL sweeps it
+const TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_ENTRIES = 5000;
 
 type GrantInput = Parameters<DraftStore['grantEntitlement']>[0];
 interface ConsumedRecord {
@@ -24,8 +16,6 @@ interface Entry<V> {
   expiresAt: number;
 }
 
-// Insertion-ordered map (native Map semantics) with lazy TTL expiry and a hard
-// size cap, so none of the maps below can grow without bound.
 class TTLMap<V> {
   private map = new Map<string, Entry<V>>();
 
@@ -33,7 +23,7 @@ class TTLMap<V> {
 
   set(key: string, value: V): void {
     this.sweep();
-    this.map.delete(key); // re-insert so it becomes the newest for FIFO eviction below
+    this.map.delete(key);
     this.map.set(key, { value, expiresAt: Date.now() + this.ttlMs });
     while (this.map.size > this.maxEntries) {
       const oldest = this.map.keys().next().value;
@@ -56,8 +46,6 @@ class TTLMap<V> {
     return Array.from(this.map, ([key, entry]) => [key, entry.value]);
   }
 
-  // Rehydration from disk: the persisted snapshot has no reliable expiry of its
-  // own (the file may be old), so loaded rows get a fresh TTL window from now.
   hydrate(rows: [string, V][]): void {
     const expiresAt = Date.now() + this.ttlMs;
     for (const [key, value] of rows) this.map.set(key, { value, expiresAt });
@@ -76,8 +64,6 @@ const orders = new TTLMap<OrderRecord>(TTL_MS, MAX_ENTRIES);
 const consumed = new TTLMap<ConsumedRecord>(TTL_MS, MAX_ENTRIES);
 const entitlements = new TTLMap<true>(TTL_MS, MAX_ENTRIES);
 
-// Off by default -- set to an absolute (or cwd-relative) path to persist across
-// restarts during local dev. Never required for build/typecheck/smoke.
 const STORE_FILE = process.env.OCCASION_STORE_FILE || '';
 
 interface Snapshot {
@@ -98,7 +84,6 @@ function loadSnapshot(): void {
     consumed.hydrate(snap.consumed ?? []);
     entitlements.hydrate(snap.entitlements ?? []);
   } catch (err) {
-    // Corrupt or unreadable snapshot: start empty rather than fail the process.
     console.error('[store] could not load', STORE_FILE, '- starting empty:', err);
   }
 }
@@ -115,17 +100,12 @@ function persist(): void {
     fs.mkdirSync(path.dirname(STORE_FILE), { recursive: true });
     fs.writeFileSync(STORE_FILE, JSON.stringify(snap));
   } catch (err) {
-    // Best-effort only: the in-memory store stays authoritative for this process.
     console.error('[store] could not persist to', STORE_FILE, ':', err);
   }
 }
 
 loadSnapshot();
 
-// Synchronous core, exported only for lib/store.ts's legacy shim (saveDrafts /
-// getDrafts), which not-yet-migrated routes still call without `await`. Safe to
-// expose as sync because every operation here already is -- the DraftStore
-// methods below just wrap these in a resolved Promise for the async interface.
 export function putDraftsSync(rec: DraftRecord): void {
   drafts.set(rec.generationId, rec);
   persist();
@@ -139,14 +119,10 @@ function grantEntitlementSync(input: GrantInput): GrantResult {
   const order = orders.get(input.orderId);
   if (!order) return 'not_found';
 
-  // The order's own generationId binding is authoritative; a mismatch here means
-  // this orderId/paymentId is being pointed at a generation it was never paid for.
   if (order.generationId !== input.generationId) return 'replay';
 
   const consumeKey = `${input.orderId}::${input.paymentId}`;
   const prior = consumed.get(consumeKey);
-  // Belt-and-suspenders: also check the consumption ledger directly, so a replay
-  // is still caught even if an order record were ever overwritten in place.
   if (prior && prior.generationId !== input.generationId) return 'replay';
 
   if (order.owner !== input.owner) return 'owner_mismatch';
@@ -159,7 +135,7 @@ function grantEntitlementSync(input: GrantInput): GrantResult {
     entitlements.set(input.generationId, true);
     persist();
   }
-  return 'granted'; // first grant, or an idempotent replay of the identical triple
+  return 'granted';
 }
 
 export function createMemoryStore(): DraftStore {

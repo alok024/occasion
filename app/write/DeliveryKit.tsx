@@ -14,14 +14,11 @@ interface DeliveryKitProps {
   honoree: string;
 }
 
-// Slow, steady reading pace for a room full of people, not a conversation.
 const WORDS_PER_MINUTE = 130;
 const SWEET_SPOT_MIN_SEC = 3 * 60;
 const SWEET_SPOT_MAX_SEC = 5 * 60;
 const TELEPROMPTER_PX_PER_SEC = 22;
 
-// Common sentence-starters that happen to be capitalized, so they don't clutter
-// the pronunciation guide alongside actual names.
 const CAPITALIZED_STOPWORDS = new Set([
   'The', 'This', 'That', 'They', 'Their', 'There', 'When', 'What', 'With',
   'From', 'Today', 'Here', 'Every', 'Some', 'Once', 'Then', 'And', 'But',
@@ -39,9 +36,6 @@ function formatMinSec(totalSeconds: number): string {
   return `${m}:${rem.toString().padStart(2, '0')}`;
 }
 
-// Rough pass at names worth rehearsing: the honoree's own name plus any other
-// capitalized words in the draft. Good enough for a pronunciation checklist
-// without pulling in a real NLP dependency.
 function extractPronunciationList(text: string, honoree: string): string[] {
   const found = new Set<string>();
   honoree

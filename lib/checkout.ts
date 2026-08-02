@@ -1,5 +1,3 @@
-// Shared checkout — mock-friendly so the full order -> verify -> unlock flow runs
-// locally with zero Razorpay keys. Amounts are in the smallest currency unit (paise).
 
 import { createOrder, verifyPaymentSignature, mockSignature, RAZORPAY_MOCK } from './razorpay';
 
@@ -10,10 +8,6 @@ export interface Plan {
   kind: string;
 }
 
-// Single INR price for the full speech plus delivery kit; rewrites are included,
-// not sold separately. Razorpay is merchant of record on the charge, so a global
-// card is simply converted to INR by the customer's bank at checkout — no
-// per-currency plan variants needed.
 export const PLANS: Record<string, Plan> = {
   unlock: {
     amount: 199900,
@@ -38,7 +32,6 @@ export async function createCheckoutOrder(planId: string, notes?: Record<string,
   const order = await createOrder(plan.amount, plan.currency, { ...notes, planId });
 
   if (order.mock) {
-    // Precompute a valid mock payment so the browser can finish without a real modal.
     const paymentId = 'pay_mock_' + order.order_id.slice(-8);
     const signature = mockSignature(order.order_id, paymentId);
     return {

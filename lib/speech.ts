@@ -1,6 +1,3 @@
-// Speech generation. Real drafts come from Groq (llama-3.3-70b); with no GROQ_API_KEY
-// the mockResponder composes a coherent, multi-paragraph speech per style that actually
-// weaves in the speaker, honoree, relationship and anecdotes — not an echo of the prompt.
 
 import { generateText, type ChatMessage } from './groq';
 
@@ -62,7 +59,6 @@ function occasionMeta(occasion: string): OccasionMeta {
       toast: (i) => `So here's to ${i.honoree} — to everything already behind us, and to all the good still ahead.`,
     };
   }
-  // Default: wedding / toast / general celebration.
   return {
     open: (i) => `For those who don't know me, I'm ${i.speaker}, and I have the honor of being ${i.honoree}'s ${i.relationship}.`,
     raise: 'raise a glass to',
@@ -78,8 +74,6 @@ function lower1(s: string): string {
   return s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
 }
 
-// Colon/dash framings are grammar-agnostic: they read cleanly whether an anecdote is a
-// full clause ("we stood by each other") or a fragment ("road trip to the coast").
 function weave(anecdotes: string[], framings: string[]): string {
   return anecdotes
     .map((a, idx) => framings[idx % framings.length].replace('{a}', lower1(a)))

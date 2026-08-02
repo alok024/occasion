@@ -18,7 +18,6 @@ export async function POST(req: Request) {
     return Response.json({ error: 'planId is required' }, { status: 400 });
   }
 
-  // createCheckoutOrder throws on an unknown planId; that throw is our 400 signal.
   let order: Awaited<ReturnType<typeof createCheckoutOrder>>;
   try {
     order = await createCheckoutOrder(planId, { generationId });
@@ -27,8 +26,6 @@ export async function POST(req: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 
-  // Bind the order to generationId+owner server-side so /api/unlock can later
-  // reconstruct intent instead of trusting whatever the client claims back.
   await getStore().putOrder({
     orderId: order.order_id,
     planId,

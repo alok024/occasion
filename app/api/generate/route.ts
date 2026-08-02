@@ -29,8 +29,6 @@ function requestIp(req: Request): string {
   return req.headers.get('x-real-ip') || 'unknown';
 }
 
-// Strong opening + shape of the first draft only; the rest of this draft and
-// the other full drafts stay server-side until /api/unlock grants entitlement.
 function buildPreview(draft: StoredDraft): { style: string; title: string; text: string } {
   const paragraphs = draft.text.split(/\n\n+/).filter((p) => p.trim().length > 0);
   const opening = paragraphs[0] ?? draft.text;

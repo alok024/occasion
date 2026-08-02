@@ -19,7 +19,6 @@ async function testSpeechAndCheckout() {
   if (!s.drafts.every((d) => d.text.length > 200)) {
     throw new Error('a draft was shorter than 200 chars');
   }
-  // Content must actually weave in the inputs, not echo the prompt.
   if (!s.drafts.some((d) => d.text.includes('Sam') && d.text.includes('Alex'))) {
     throw new Error('drafts do not reference the names');
   }
@@ -63,8 +62,6 @@ async function testStoreRoundTrip() {
   }
 }
 
-// Stores a fresh, never-granted order so entitlement checks below don't share
-// state with each other.
 async function seedOrder(owner: string) {
   const store = getStore();
   const plan = PLANS.unlock;
@@ -108,11 +105,9 @@ async function testSingleUseEntitlement() {
   const entitled = await store.isEntitled(generationId);
   if (!entitled) throw new Error('generationId should be entitled after grantEntitlement');
 
-  // Same (orderId,paymentId) claimed against a generationId it was never issued for.
   const replay = await store.grantEntitlement({ ...grantInput, generationId: crypto.randomUUID() });
   if (replay !== 'replay') throw new Error(`expected replay for a reused payment, got ${replay}`);
 
-  // Fresh orders below so these checks can't be shadowed by the grant already recorded above.
   const wrongAmount = await seedOrder(owner);
   const amountMismatch = await store.grantEntitlement({
     generationId: wrongAmount.generationId,

@@ -25,8 +25,6 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: 'invalid_signature' });
   }
 
-  // Intent (plan/amount/currency) comes only from the order we stored server-side
-  // at /api/checkout/order — the client body is never trusted for what was bought.
   const store = getStore();
   const order = await store.getOrder(order_id);
   const plan = order ? PLANS[order.planId] : undefined;

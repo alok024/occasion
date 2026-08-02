@@ -24,10 +24,6 @@ const OCCASIONS = [
 const TONES = ['Heartfelt', 'Funny', 'Formal'];
 const LENGTHS = ['short', 'medium', 'long'];
 
-// Shared checkout client. Returns the verification tuple for the given plan.
-// In mock mode (no Razorpay keys) the order route ships a precomputed mock payment,
-// so the browser completes with no modal and no charge. With real keys the second
-// branch loads the Razorpay modal. Both branches stay in the code.
 async function purchase(
   planId: string,
   generationId: string,
@@ -48,7 +44,6 @@ async function purchase(
     };
   }
 
-  // Real keys: load Razorpay checkout and open the modal.
   await loadRazorpay();
   return new Promise((resolve, reject) => {
     const rzp = new (window as any).Razorpay({

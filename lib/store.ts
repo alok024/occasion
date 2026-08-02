@@ -1,10 +1,3 @@
-// Thin barrel over lib/store/*. getStore() and the record/result types now live
-// in lib/store/index.ts (see it for the real interface + the durable-store plan).
-//
-// saveDrafts/getDrafts below are a transitional shim for routes not yet migrated
-// to the owner/entitlement flow (no signature change for them to absorb): they
-// mint a generationId internally and write through to the same singleton store,
-// with no owner and no purchase entitlement attached.
 
 import crypto from 'crypto';
 import { getDraftsSync, putDraftsSync } from './store/memory';
