@@ -18,6 +18,11 @@ export async function POST(req: Request) {
     return Response.json({ error: 'planId is required' }, { status: 400 });
   }
 
+  const draft = await getStore().getDrafts(generationId);
+  if (!draft || draft.owner !== owner) {
+    return Response.json({ error: 'forbidden' }, { status: 403 });
+  }
+
   let order: Awaited<ReturnType<typeof createCheckoutOrder>>;
   try {
     order = await createCheckoutOrder(planId, { generationId });

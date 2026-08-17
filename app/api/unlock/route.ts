@@ -47,5 +47,8 @@ export async function POST(req: Request) {
   }
 
   const draftRecord = await store.getDrafts(generationId);
+  if (draftRecord && draftRecord.owner !== owner) {
+    return Response.json({ ok: false, error: 'forbidden' }, { status: 403 });
+  }
   return Response.json({ ok: true, drafts: draftRecord?.drafts ?? [], deliveryKit: true });
 }
