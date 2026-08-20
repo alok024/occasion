@@ -106,12 +106,12 @@ function persist(): void {
 
 loadSnapshot();
 
-export function putDraftsSync(rec: DraftRecord): void {
+function putDraftsSync(rec: DraftRecord): void {
   drafts.set(rec.generationId, rec);
   persist();
 }
 
-export function getDraftsSync(generationId: string): DraftRecord | undefined {
+function getDraftsSync(generationId: string): DraftRecord | undefined {
   return drafts.get(generationId);
 }
 

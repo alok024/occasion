@@ -14,10 +14,14 @@ Built with Next.js 15 (App Router) + React 18. Text generation via Groq (model s
 back to OpenAI on a timeout or an empty completion); payments via Razorpay. Both providers have a
 keyless mock mode, so the entire product builds and its core flow works locally with no API keys.
 
+**Status: not an operating service.** This is a finished build that was never launched.
+It has no customers and takes no payments; the repository is public as engineering
+reference. Everything below runs end to end in mock mode with no API keys.
+
 ## What it does
 
 - **Landing page** (`/`): eulogy-first hero, occasion chips (eulogy and memorial first, then
-  wedding, toast, vows, and anniversary), testimonial row, the delivery kit, pricing, and a Start
+  wedding, toast, vows, and anniversary), how it works, the delivery kit, pricing, and a Start
   button.
 - **Writer** (`/write`): a questionnaire (occasion, speaker, honoree, relationship, tone, up to
   four memories, length) that works for a eulogy, a wedding toast, or a vow. Generate produces
@@ -68,26 +72,20 @@ Checkout flow (identical across products, mock-friendly):
    captured amount and currency against the plan, and consumes each `(order_id, payment_id)` pair
    once. On success it returns the four drafts and the delivery kit from the store; on failure it
    returns a structured error and no drafts.
+4. `POST /api/webhook/razorpay` is the server-side fallback for the same grant: Razorpay calls it
+   directly on `payment.captured`, independent of whether the client's browser ever reaches step
+   3 (closed tab, dropped connection). It verifies `x-razorpay-signature` via
+   `verifyWebhookSignature` (HMAC-SHA256 over the raw body with `RAZORPAY_WEBHOOK_SECRET`), looks
+   the order up by the `order_id` in the payload, and calls the same `grantEntitlement` as
+   `/api/unlock` using the owner and `generationId` already on file for that order — never from
+   the webhook payload. Granting is idempotent, so a payment that both the client and the webhook
+   confirm is only ever consumed once.
 
 Because `RAZORPAY_MOCK` is true with no keys, `verifyPaymentSignature` accepts exactly the mock
 signature the order route produced — so the order → verify → unlock loop closes locally and
 proves the checkout end-to-end. In production, Razorpay is fail-closed: with no live keys and
 `RAZORPAY_MOCK` unset, checkout and webhook routes refuse to run rather than silently falling
 back to mock behavior.
-
-## Real cost-per-use math
-
-- One order generates **4 drafts** at roughly **3–4k output tokens total**, plus the delivery kit
-  (teleprompter, timed read, pronunciation guide) built from that same text.
-- Token cost per order is a fraction of a cent on Groq, whichever current model `GROQ_MODEL`
-  points at.
-- Sell price: **one INR price** per unlock (see `PLANS.unlock` in `lib/checkout.ts`), covering all
-  four drafts and the entire delivery kit. Razorpay fees aside, model spend is a rounding error
-  against that price.
-- **Gross margin stays north of 99%.**
-
-The mock composer generates the same four drafts locally for free, so development and demos cost
-nothing.
 
 ## Going live — real API keys needed
 
@@ -98,9 +96,10 @@ Set these in `.env.local` (see `.env.example` for the full list):
   `OPENAI_API_KEY` + `OPENAI_MODEL` are used as an automatic failover on a Groq timeout or a
   blank completion.
 - `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` — live checkout (test keys
-  `RAZORPAY_TEST_KEY_ID` / `RAZORPAY_TEST_KEY_SECRET` are also honored). Add
-  `RAZORPAY_WEBHOOK_SECRET` only if you wire up the webhook. In production, missing keys fail the
-  request closed instead of silently continuing in mock mode.
+  `RAZORPAY_TEST_KEY_ID` / `RAZORPAY_TEST_KEY_SECRET` are also honored). Also set
+  `RAZORPAY_WEBHOOK_SECRET` and point a Razorpay webhook at `/api/webhook/razorpay` for
+  `payment.captured`, so a grant still lands if the client never gets back to `/api/unlock`. In
+  production, missing keys fail the request closed instead of silently continuing in mock mode.
 
 The moment a real Groq key is present the app calls Groq; the moment real Razorpay keys are
 present the browser opens the real checkout modal. No code changes — both branches already exist.

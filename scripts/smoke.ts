@@ -3,6 +3,7 @@ import { generateSpeeches } from '../lib/speech';
 import { createCheckoutOrder, confirmPurchase, PLANS } from '../lib/checkout';
 import { getStore } from '../lib/store';
 import { getTtsProvider } from '../lib/tts';
+import { POST as webhookHandler } from '../app/api/webhook/razorpay/route';
 
 async function testSpeechAndCheckout() {
   const s = await generateSpeeches({
@@ -137,6 +138,40 @@ async function testSingleUseEntitlement() {
   }
 }
 
+async function testWebhook() {
+  const store = getStore();
+  const owner = 'owner_' + crypto.randomUUID();
+  const { generationId, orderId, paymentId } = await seedOrder(owner);
+
+  const captured = await webhookHandler(
+    new Request('http://localhost/api/webhook/razorpay', {
+      method: 'POST',
+      headers: { 'x-razorpay-signature': 'mock-signature-in-dev' },
+      body: JSON.stringify({
+        event: 'payment.captured',
+        payload: { payment: { entity: { id: paymentId, order_id: orderId } } },
+      }),
+    }),
+  );
+  const capturedJson = await captured.json();
+  if (!capturedJson.ok) {
+    throw new Error(`expected the webhook to grant entitlement, got ${JSON.stringify(capturedJson)}`);
+  }
+
+  const entitled = await store.isEntitled(generationId);
+  if (!entitled) throw new Error('generationId should be entitled after the webhook fires');
+
+  const ignored = await webhookHandler(
+    new Request('http://localhost/api/webhook/razorpay', {
+      method: 'POST',
+      headers: { 'x-razorpay-signature': 'mock-signature-in-dev' },
+      body: JSON.stringify({ event: 'payment.failed', payload: {} }),
+    }),
+  );
+  const ignoredJson = await ignored.json();
+  if (!ignoredJson.ignored) throw new Error('an unhandled webhook event should be acknowledged and ignored');
+}
+
 async function testMockTts() {
   const provider = getTtsProvider();
   const result = await provider.synthesize('A short rehearsal line to time.');
@@ -149,6 +184,7 @@ async function main() {
   await testSpeechAndCheckout();
   await testStoreRoundTrip();
   await testSingleUseEntitlement();
+  await testWebhook();
   await testMockTts();
 
   console.log('SMOKE-OK');

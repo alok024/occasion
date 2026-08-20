@@ -2,21 +2,6 @@ import Link from 'next/link';
 
 const occasions = ['Eulogy', 'Memorial', 'Wedding', 'Toast', 'Vows', 'Anniversary'];
 
-const testimonials = [
-  {
-    quote: 'The eulogy for my father felt impossible to write. This gave me the words I could not find, in my own voice.',
-    who: 'Priya, daughter',
-  },
-  {
-    quote: 'I had two days and no idea where to start. Ten minutes here and I had a best-man speech that made the whole room laugh, then go quiet.',
-    who: 'Marcus, best man',
-  },
-  {
-    quote: 'Four different takes meant I could pick the one that actually sounded like me. Worth every rupee.',
-    who: 'Dana, maid of honor',
-  },
-];
-
 export default function Home() {
   return (
     <main>
@@ -48,17 +33,6 @@ export default function Home() {
               <span key={o} className="badge" style={{ margin: '4px' }}>{o}</span>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section className="container section">
-        <div className="grid cols-3">
-          {testimonials.map((t) => (
-            <div key={t.who} className="card">
-              <p style={{ margin: 0 }}>&ldquo;{t.quote}&rdquo;</p>
-              <p className="muted" style={{ marginBottom: 0, marginTop: 14, fontWeight: 600 }}>{t.who}</p>
-            </div>
-          ))}
         </div>
       </section>
 
